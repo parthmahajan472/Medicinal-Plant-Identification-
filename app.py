@@ -84,6 +84,8 @@ model_segment.load_weights('leaf_weights.weights.h5')
 f2 = open("drugTree2.pkl", "rb")
 model_med = pickle.load(f2)
 
+
+
 #Mapping Symptoms as indexes in dataset using dictionary
 symptom_mapping = {
     'acidity': 0,
@@ -119,6 +121,20 @@ symptom_mapping = {
     'burning_ache': 30
 }
 
+class medForm(FlaskForm):
+    gender = SelectField('Gender :', render_kw={"style": "width: 170px;"},choices=[('', ' Select your gender'),(1,' Male'),(0,' Female')],default= None,validators=[DataRequired()])
+    age = StringField(validators=[InputRequired()],render_kw={"style": "width: 60px;","placeholder": "Age"})
+    severity = SelectField('Severity :',  render_kw={"style": "width: 220px;"},choices=[('', 'Select the level of severity'),(0,'Few days'),(1,'A week'),(2,'Few weeks or more')],default= None,validators=[DataRequired()])
+    disease = SelectField('Disease :',  render_kw={"style": "width: 150px;"}, choices=[('', ' Select the diease'),(0, 'Diarrhea'), (1, 'Gastritis'),(2, 'Arthritis'),(3, 'Migraine')],default= None,validators=[DataRequired()])
+
+def medicineValidation(selectedOptions):
+    """Defining a function to recommend medicine"""
+    inputs = np.array(selectedOptions)  # convert list to NumPy array
+    inputs = inputs.reshape(1, -1)
+    # Pass the inputs to your machine learning model and retrieve the predicted result
+    recommend_Med = model_med.predict(inputs)
+    # Return the predicted result to the user
+    return recommend_Med[0]
 
 def process_image(file_path):
     img = image.load_img(file_path, target_size=(256, 256))
@@ -224,6 +240,9 @@ def login():
 def forgot():
     return render_template('forgot.html')
 
+@app.route('/recommendation')
+def recommendation():
+    return render_template('recommendation.html')
 
 @app.route('/verification')
 def verification():
@@ -278,6 +297,19 @@ def plant_segment():
         plant_description = fetch_leaf_description(leaf_species)
 
         return render_template('prediction.html', prediction=prediction, plant_description=plant_description) #
+
+@app.route('/med_service', methods=['GET','POST'])
+
+def med_service():
+    form = medForm()
+    # user = User.query.filter_by(id=current_user.id).first()
+
+    if form.validate_on_submit():
+        selectedOptions = [form.disease.data, form.age.data, form.gender.data, form.severity.data]
+        recommend_Med = medicineValidation(selectedOptions)
+        return render_template("recommendation.html", form=form, predicted_result=recommend_Med.upper())
+
+    return render_template("recommendation.html",form=form  )
 
 
 
